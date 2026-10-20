@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Для тебя...</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #fdf5f5;
+            color: #4a3b3b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Экран 1: Вопрос */
+        #quiz-screen {
+            text-align: center;
+            z-index: 10;
+            padding: 20px;
+            width: 100%;
+            transition: opacity 0.8s ease;
+        }
+        .question { font-size: 22px; margin-bottom: 25px; }
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        input[type="number"] {
+            padding: 15px; font-size: 22px; border: 2px solid #e0c3c3;
+            border-radius: 12px; width: 130px; text-align: center;
+            outline: none; background-color: rgba(255, 255, 255, 0.8);
+        }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        button {
+            padding: 14px 35px; font-size: 18px; background-color: #e8b4b4;
+            color: white; border: none; border-radius: 12px; cursor: pointer;
+            width: 100%; max-width: 200px;
+        }
+        .error-msg { color: #d9534f; font-size: 15px; height: 20px; opacity: 0; transition: opacity 0.3s; }
+
+        /* Экран 2: Конверт */
+        #envelope-screen {
+            display: none; opacity: 0;
+            width: 100%; max-width: 350px; padding: 20px;
+            transition: opacity 1s ease;
+            text-align: center;
+        }
+        .envelope-wrapper { position: relative; width: 100%; cursor: pointer; }
+        .envelope-img {
+            width: 100%; display: block;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.15));
+        }
+
+        /* Экран 3: Письмо */
+        #full-letter-screen {
+            display: none; opacity: 0;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            justify-content: center; align-items: flex-start;
+            padding: 40px 15px;
+            z-index: 20; overflow-y: auto; background-color: #fdf5f5;
+            transition: opacity 1s ease;
+        }
+        .letter-content {
+            width: 100%; max-width: 450px;
+            background: url('img/paper.jpg') no-repeat center center;
+            background-size: cover; border-radius: 8px; padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); text-align: center;
+            filter: contrast(1.1) brightness(1.05) grayscale(10%);
+            transform: translateY(50px); transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 20px;
+        }
+        .show-letter .letter-content { transform: translateY(0); }
+        
+        .main-photo {
+            width: 90%; max-width: 300px; border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); margin-bottom: 20px;
+            border: 4px solid white;
+        }
+        
+        .letter-text {
+            font-size: 16px; line-height: 1.6; color: #222;
+            background: rgba(255,255,255, 0.8); padding: 15px;
+            border-radius: 8px; font-weight: 500; margin-bottom: 20px;
+            text-align: left;
+        }
+
+        /* Блок для новых 4 фотографий */
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .photo-gallery img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 3px solid white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            cursor: pointer; /* Курсор-ручка, чтобы было понятно, что можно кликнуть */
+            transition: transform 0.2s ease;
+        }
+        .photo-gallery img:hover {
+            transform: scale(1.05);
+        }
+
+        /* Стили для всплывающего окна (Лайтбокс) */
+        #lightbox {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            cursor: zoom-out;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #lightbox img {
+            max-width: 100%;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        #lightbox.show {
+            opacity: 1;
+        }
+        #lightbox.show img {
+            transform: scale(1);
+        }
+        /* Крестик для закрытия */
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+        }
+
+        @media (max-width: 480px) {
+            .letter-text { font-size: 14px; padding: 12px; }
+            .main-photo { width: 100%; }
+            .photo-gallery img { height: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="quiz-screen">
+        <h1 class="question">Насколько ты меня любишь? (в процентах)</h1>
+        <div class="input-group">
+            <input type="number" id="love-input" min="0" max="100">
+            <div class="error-msg" id="error-msg">Попробуй еще раз 😉</div>
+            <button onclick="checkAnswer()">Ответить</button>
+        </div>
+    </div>
+
+    <div id="envelope-screen">
+        <div class="envelope-wrapper" onclick="openEnvelope()">
+            <img src="img/envelope-closed.png" alt="Конверт" class="envelope-img" id="env-img">
+        </div>
+    </div>
+
+    <div id="full-letter-screen">
+        <div class="letter-content">
+            <!-- Главное фото -->
+            <img src="img/photo.jpg" alt="Наша фотография" class="main-photo">
+            
+            <!-- Твой текст -->
+            <div class="letter-text">
+                Любимая,ты самый чудесный и прекрасный человек,которого я встречал в этой жизни.<br><br>
+                Я тебя безумно сильно люблю и до безумия рад,что ты рядом со мной. Я всегда буду рядом,всегда тебя выслушаю и поддержу в любой ситуации.<br><br>
+                Часто в последнее время вспоминаю наши яркие моменты:вечера,когда мы делали задания ЕГЭ,когда смотрели фильмы у меня дома,гуляли и часами разговаривали с тобой. Благодаря тебе я познал,что такое настоящая любовь и счастье.<br><br>
+                Я верю,что мы пройдем через всё и будем счастливы вместе. Я люблю тебя.
+            </div>
+
+            <!-- Галерея из 4 новых фото с добавленным onclick -->
+            <div class="photo-gallery">
+                <img src="img/photo1.jpg" alt="Фото 1" onclick="openLightbox(this.src)">
+                <img src="img/photo2.jpg" alt="Фото 2" onclick="openLightbox(this.src)">
+                <img src="img/photo3.jpg" alt="Фото 3" onclick="openLightbox(this.src)">
+                <img src="img/photo4.jpg" alt="Фото 4" onclick="openLightbox(this.src)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Само всплывающее окно -->
+    <div id="lightbox" onclick="closeLightbox()">
+        <span class="close-btn" onclick="closeLightbox()">×</span>
+        <img id="lightbox-img" src="" alt="Увеличенное фото">
+    </div>
+
+    <script>
+        function checkAnswer() {
+            const input = document.getElementById('love-input');
+            const errorMsg = document.getElementById('error-msg');
+            const quizScreen = document.getElementById('quiz-screen');
+            const envelopeScreen = document.getElementById('envelope-screen');
+            const answer = parseInt(input.value);
+
+            if (answer === 100) {
+                errorMsg.style.opacity = 0;
+                quizScreen.style.opacity = 0;
+                setTimeout(() => {
+                    quizScreen.style.display = 'none';
+                    envelopeScreen.style.display = 'block';
+                    setTimeout(() => { envelopeScreen.style.opacity = 1; }, 50);
+                }, 800);
+            } else {
+                errorMsg.style.opacity = 1;
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        document.getElementById('love-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') checkAnswer();
+        });
+
+        function openEnvelope() {
+            const envelopeImg = document.getElementById('env-img');
+            const envelopeScreen = document.getElementById('envelope-screen');
+            const fullLetterScreen = document.getElementById('full-letter-screen');
+
+            envelopeImg.style.transform = 'scale(0.8) translateY(50px)';
+            envelopeImg.style.opacity = '0';
+
+            setTimeout(() => {
+                envelopeScreen.style.display = 'none';
+                fullLetterScreen.style.display = 'flex';
+                setTimeout(() => {
+                    fullLetterScreen.style.opacity = 1;
+                    fullLetterScreen.classList.add('show-letter');
+                }, 50);
+            }, 800);
+        }
+
+        // Функции для лайтбокса
+        function openLightbox(src) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            lightboxImg.src = src;
+            lightbox.style.display = 'flex';
+            // Маленькая задержка для срабатывания CSS-анимации
+            setTimeout(() => {
+                lightbox.classList.add('show');
+            }, 10);
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('show');
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+            }, 300); // Ждем окончания анимации исчезновения
+        }
+    </script>
+</body>
+</html>
